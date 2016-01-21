@@ -41,6 +41,7 @@ class StringAVLTreeExtra extends StringAVLTree {
             grid[1][width / 2] = " " + subRoot.getBalance();
             
         int numOfDash = (int) Math.pow(2, depth - 2);
+        
         if (subRoot.getLeft() != null) {
             for (int i = 0;i < numOfDash; i++) {
                 grid[2 * (numOfDash - i)][i + width / 4 + 1] = "/  ";
