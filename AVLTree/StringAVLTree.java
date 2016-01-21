@@ -637,7 +637,7 @@ class StringAVLTree {
 							prev.setRight(replacement);
 						}
 					}
-					else { //replacement.getLeft().getBalance() == 1, double rotation case
+					else {  //replacement.getLeft().getBalance() == 1, double rotation case
 						//Check if it is a x insert or a y insert.  Update balances accordingly.
 						if (replacement.getLeft().getRight().getBalance() == -1) {
 							replacement.setLeft(rotateLeft(replacement.getLeft()));
