@@ -64,5 +64,5 @@ class StringAVLTreeExtra2 extends StringAVLTree {
 			s = paren_out1(getRoot())+bal_out1(getRoot())+String.valueOf(this.leafCt())+" "+
 			    String.valueOf(this.height())+" "+String.valueOf(this.balanced());
 			return s;
-	}
+	} 
 }
