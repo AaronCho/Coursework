@@ -1,0 +1,205 @@
+Script started on Thu 07 May 2015 04:24:52 PM PDT
+$ cat forkpipe.c
+#include <stdio.h>
+
+
+int main(int argc, char *argv[]) {
+        FILE *fp, *fopen();
+        int c, i, nl_cnt = 0, word_cnt = 0, byte_cnt = 0;
+        int total_nl_cnt = 0, total_word_cnt = 0, total_byte_cnt = 0;
+        int inWord = 0, originalargc = argc, dashargv = 2, lFlag = 0, wFlag = 0, cFlag = 0;
+        int originalpid = getpid();
+        int fd[2];
+        pipe(fd);
+
+        int processCount = argc;
+        struct countinfo {
+                int wordcount;
+                int linecount;
+                int bytecount;
+        };
+
+        struct countinfo countstruct;
+
+        if (argc == 1) {
+                while ((c = getc(stdin)) != EOF) {
+                        putc(c, stdout);
+                }
+        }
+        else {
+                if (argv[1][0] == '-') {
+                        if (argv[1][1] == 'l')
+                                lFlag = 1;
+                        if (argv[1][1] == 'w')
+                                wFlag = 1;
+                        if (argv[1][1] == 'c')
+                                cFlag = 1;
+                        if (argv[1][2] == 'l')
+                                lFlag = 1;
+                        if (argv[1][2] == 'w')
+                                wFlag = 1;
+                        if (argv[1][2] == 'c')
+                                cFlag = 1;
+                //      if (argv[1][3] == 'l')
+                //              lFlag = 1;
+                //      if (argv[1][3] == 'w')
+                //              wFlag = 1;
+                //      if (argv[1][3] == 'c')
+                //              cFlag = 1;
+                        int x;
+                        for (x = 0; x < processCount; x++) {
+                                if (fork() == 0) {//child process
+                                        nl_cnt = 0;
+                                        word_cnt = 0;
+                                        byte_cnt = 0;
+                                        //argv is 2 because we want to start at the first file, not -.
+                                        if ((fp = fopen(argv[dashargv], "r")) == NULL) {
+                                                printf("can't open file");
+                                                break;
+                                        }
+                                        else {
+                                                while ((c = getc(fp)) != EOF) {
+                                                        if (c == '\n') {
+                                                                nl_cnt++;
+                                                        }
+                                                        if (isspace(c)) {
+                                                                if (inWord >= 1) {
+                                                                        word_cnt++;
+                                                                }
+                                                                inWord = 0;
+                                                        }
+                                                        else if (isalpha(c) || ispunct(c) || isdigit(c)) {
+                                                                inWord++;
+                                                        }
+                                                        byte_cnt++;
+                                                }
+                                                if (inWord > 2) {
+                                                        word_cnt++;
+                                                }
+                                                fclose(fp);
+                                        }
+
+
+                                        if (lFlag == 1)
+                                                printf(" %d ", nl_cnt);
+                                        if (wFlag == 1)
+                                                printf(" %d ", word_cnt);
+                                        if (cFlag == 1)
+                                                printf(" %d Process ID: %d ", byte_cnt, getpid());
+
+                                        dashargv++;
+
+                                        //store the counts in the struct and send the struct through the pipe
+                                        close(fd[0]);
+                                        countstruct.linecount = nl_cnt;
+                                        countstruct.wordcount = word_cnt;
+                                        countstruct.bytecount = byte_cnt;
+
+                                        write(fd[1], &countstruct, sizeof(countstruct));
+
+                                }//end if
+                                else {
+                                        close(fd[1]);
+                                        read(fd[0], &countstruct, sizeof(countstruct));
+                                        total_nl_cnt += countstruct.linecount;
+                                        total_word_cnt += countstruct.wordcount;
+                                        total_byte_cnt += countstruct.bytecount;
+
+                                }
+                        }//end for loop
+
+                        if (originalargc > 3) {
+                                if (lFlag == 1)
+                                        printf(" %d ", total_nl_cnt);
+                                if (wFlag == 1)
+                                        printf(" %d ", total_word_cnt);
+                                if (cFlag == 1)
+                                        printf(" %d ", total_byte_cnt);
+                                printf(" total Parent Process ID: %d\n", getpid());
+                        }
+
+                }
+                else {
+                        //count
+                        int x;
+                        for (x = 0; x < processCount - 1; x++) {
+                                if (fork() == 0) {//child process
+                                        nl_cnt = 0;
+                                        word_cnt = 0;
+                                        byte_cnt = 0;
+
+                                        if ((fp = fopen(*++argv, "r")) == NULL) {
+                                                printf("can't open file");
+                                                break;
+                                        }
+                                        else {
+                                                while ((c = getc(fp)) != EOF) {
+                                                        if (c == '\n') {
+                                                                nl_cnt++;
+                                                        }
+                                                        if (isspace(c)) {
+                                                                if (inWord >= 1) {
+                                                                        word_cnt++;
+                                                                }
+                                                                inWord = 0;
+                                                        }
+                                                        else if (isalpha(c) || ispunct(c)|| isdigit(c)) {
+                                                                inWord++;
+                                                        }
+                                                        byte_cnt++;
+                                                }
+                                                if (inWord > 2) {
+                                                        word_cnt++;
+                                                }
+                                                        fclose(fp);
+                                        }
+
+                                        printf(" %d ", nl_cnt);
+                                        printf(" %d ", word_cnt);
+                                        printf(" %d ", byte_cnt);
+                                        printf(" %s Process ID: %d\n", *argv, getpid());
+
+                                        //store the counts in the struct and send the struct through the pipe
+                                        close(fd[0]);
+                                        countstruct.linecount = nl_cnt;
+                                        countstruct.wordcount = word_cnt;
+                                        countstruct.bytecount = byte_cnt;
+
+                                        write(fd[1], &countstruct, sizeof(countstruct));
+
+                        }//end if, child process
+                        else {//parent process
+                                close(fd[1]);
+                                read(fd[0], &countstruct, sizeof(countstruct));
+
+                                total_nl_cnt += countstruct.linecount;
+                                total_word_cnt += countstruct.wordcount;
+                                total_byte_cnt += countstruct.bytecount;
+                        }
+                }//end for loop
+
+                if (originalargc > 2 && originalpid == getpid()) {
+                        printf(" %d ", total_nl_cnt);
+                        printf(" %d ", total_word_cnt);
+                        printf(" %d ", total_byte_cnt);
+                        printf(" total  Parent Process ID: %d\n", getpid());
+                }
+
+        }//end big else
+
+        return 0;
+        }
+}
+
+$ gcc -o forkpipe forkpipe.c
+$ wc mywc.c fileaccess.c
+ 150  457 3012 mywc.c
+  85  275 1768 fileaccess.c
+ 235  732 4780 total
+$ ./forkpipe mywc.c fileaccess.c
+ 150  457  3012  mywc.c Process ID: 23791
+ 85  275  1768  fileaccess.c Process ID: 23792
+ 235  732  4780  total  Parent Process ID: 23790
+$ exit
+
+Script done on Thu 07 May 2015 04:25:42 PM PDT
