@@ -11,7 +11,7 @@ class StringAVLTree {
 	public StringAVLNode getRoot() {
 		return root;
 	}
-	
+	 
 	// Rotate the node to the right
 	private static StringAVLNode rotateRight(StringAVLNode t) {
 		try {
